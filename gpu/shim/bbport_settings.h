@@ -45,11 +45,11 @@ inline constexpr int OutputCount = 4;
 inline constexpr int OutputDefault = 1; ///< 1920x1080, the game's own size
 
 struct Values {
-    std::atomic<int> upscaler{UpscalerFsr3};
+    std::atomic<int> upscaler{UpscalerOff};  ///< bbport fork: native by default (no upscaler)
     std::atomic<int> preset{NativeAA};
     std::atomic<bool> sharpen{true};
     std::atomic<float> sharpness{0.3f};
-    std::atomic<bool> jitter{true};
+    std::atomic<bool> jitter{false};  ///< bbport fork: off by default (only useful with an upscaler)
     std::atomic<bool> reactive{false};
     std::atomic<bool> object_motion{true};
     std::atomic<float> reactive_scale{1.0f};
@@ -79,6 +79,7 @@ struct Values {
     bool startup_effects[EffectCount]{};
     int startup_model_lod = 0;
     int startup_output_res = OutputDefault;
+    bool output_res_chosen = false;  ///< set in bbport.ini or BB_OUTPUT_RES; else the display's size
     int startup_live_resolution = 0;
 };
 
@@ -99,5 +100,7 @@ void Save();
 float PresetScale(int preset);
 const char* PresetName(int preset);
 const char* UpscalerName(int upscaler);
+/// bbport fork: unless an output resolution was chosen, use the largest one that fits the display.
+void DefaultOutputForDisplay(int width, int height);
 
 } // namespace BbSettings

@@ -6,6 +6,7 @@
 #include "common/logging/log.h"
 #include "sdl_window.h"
 #include "bbport_overlay.h"
+#include "bbport_settings.h"
 
 namespace Frontend {
 
@@ -22,8 +23,15 @@ WindowSDL::WindowSDL(s32 width_, s32 height_, const char* title) : width{width_}
     SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_HEIGHT_NUMBER, height_);
     SDL_SetBooleanProperty(props, SDL_PROP_WINDOW_CREATE_RESIZABLE_BOOLEAN, true);
     SDL_SetBooleanProperty(props, SDL_PROP_WINDOW_CREATE_VULKAN_BOOLEAN, true);
+    // bbport fork: native by default: full screen at the display's own size, and the output
+    // resolution matched to it (unless bbport.ini or BB_OUTPUT_RES chose one). BB_FULLSCREEN=0
+    // opens a window of the requested size instead.
     const char* fullscreen = std::getenv("BB_FULLSCREEN");
-    SDL_SetBooleanProperty(props, SDL_PROP_WINDOW_CREATE_FULLSCREEN_BOOLEAN, fullscreen && fullscreen[0] == '1');
+    const bool full = !(fullscreen && fullscreen[0] == '0');
+    if (const SDL_DisplayMode* mode = SDL_GetDesktopDisplayMode(SDL_GetPrimaryDisplay())) {
+        BbSettings::DefaultOutputForDisplay(mode->w, mode->h);
+    }
+    SDL_SetBooleanProperty(props, SDL_PROP_WINDOW_CREATE_FULLSCREEN_BOOLEAN, full);
     base_title = title;
     window = SDL_CreateWindowWithProperties(props);
     SDL_DestroyProperties(props);

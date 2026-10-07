@@ -64,6 +64,7 @@ void Set(Values& v, const std::string& key, const std::string& value) {
         for (int r = 0; r < OutputCount; ++r) {
             if (value == std::to_string(OutputWidths[r]) + "x" + std::to_string(OutputHeights[r])) {
                 v.output_res = r;
+                v.output_res_chosen = true;
             }
         }
     } else {
@@ -203,6 +204,18 @@ const char* PresetName(int preset) {
     static constexpr const char* names[PresetCount] = {"Native AA", "Quality", "Balanced",
                                                        "Performance", "Ultra Performance"};
     return names[std::clamp(preset, 0, PresetCount - 1)];
+}
+
+void DefaultOutputForDisplay(int width, int height) {
+    Values& v = Get();
+    if (v.output_res_chosen || std::getenv("BB_OUTPUT_RES")) return;
+    int best = 0;
+    for (int r = 0; r < OutputCount; ++r) {
+        if (OutputWidths[r] <= width && OutputHeights[r] <= height) best = r;
+    }
+    v.output_res = best;
+    v.startup_output_res = best;
+    std::printf("Settings: output %dx%d (the display is %dx%d)\n", OutputWidths[best], OutputHeights[best], width, height);
 }
 
 const char* UpscalerName(int upscaler) {
