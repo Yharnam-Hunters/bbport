@@ -7,6 +7,7 @@
 #include <inttypes.h>
 #include "runtime.h"
 #include "gpu/bbgpu.h"
+#include "bbgame.h"
 #if !defined(__x86_64__) || !defined(__GNUC__)
 #error This prototype requires x86-64 GCC or Clang (including MinGW).
 #endif
@@ -287,6 +288,45 @@ void runtime_restart(void) {
 #endif
 }
 
+/* Yharnam-Hunters: game library (BB_GAME_LIB, bbgame.h). Hooks are installed into the relocated
+ * image before its final page protections and before any game code runs. A hook is an absolute
+ * jump at the function entry: jmp [rip+0]; .quad target. Addresses are only valid for the
+ * executable game_check.py pins, so a skipped game check refuses the library. */
+static const Segment *hook_segments;
+static uint64_t hook_segment_count, hooks_installed;
+static int install_hook(uint64_t offset, uint64_t size, const void *target) {
+    int executable = 0;
+    for (uint64_t i = 0; i < hook_segment_count; ++i)
+        if ((hook_segments[i].flags & 1) && offset >= hook_segments[i].address &&
+            size <= hook_segments[i].size && offset - hook_segments[i].address <= hook_segments[i].size - size)
+            executable = 1;
+    if (!executable || size < 14 || !target) return -1;
+    unsigned char *p = image + offset;
+    uint64_t address = (uint64_t)(uintptr_t)target;
+    p[0] = 0xff; p[1] = 0x25; memset(p + 2, 0, 4);
+    memcpy(p + 6, &address, 8);
+    ++hooks_installed;
+    return 0;
+}
+static void load_game_library(const char *path, const Segment *segments, uint64_t ns, uint64_t size) {
+#ifdef _WIN32
+    (void)path; (void)segments; (void)ns; (void)size;
+    fail("BB_GAME_LIB is not supported on Windows");
+#else
+    const char *skip = getenv("BB_SKIP_GAME_CHECK");
+    if (skip && !strcmp(skip, "1")) fail("BB_GAME_LIB needs the supported executable; unset BB_SKIP_GAME_CHECK");
+    void *library = dlopen(path, RTLD_NOW | RTLD_LOCAL);
+    if (!library) { fprintf(stderr, "dlopen: %s\n", dlerror()); fail("cannot load the game library"); }
+    BbGameInit init = (BbGameInit)dlsym(library, BBGAME_INIT_SYMBOL);
+    if (!init) fail("game library has no " BBGAME_INIT_SYMBOL);
+    hook_segments = segments; hook_segment_count = ns;
+    BbGameHost host = { BBGAME_API_VERSION, image, size, install_hook };
+    int result = init(&host);
+    printf("Game library %s: %" PRIu64 " hooks installed, init returned %d\n", path, hooks_installed, result);
+    if (result) fail("game library init failed");
+#endif
+}
+
 int main(int argc, char **argv) {
     setvbuf(stdout, NULL, _IONBF, 0);
 #ifndef _WIN32
@@ -493,6 +533,8 @@ int main(int argc, char **argv) {
         memcpy(image + relocs[i].target, &value, 8);
     }
     if (patch_file) apply_patches(patch_file, segments, ns, relocs, nr);
+    const char *game_lib = getenv("BB_GAME_LIB");
+    if (game_lib && *game_lib) load_game_library(game_lib, segments, ns, size);
     protect(traps, round_page((import_count + 1) * 32), 5);
     protect(image, round_page(size), 0);
     int executable_entry = 0;
