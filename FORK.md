@@ -1,7 +1,7 @@
 # Yharnam-Hunters fork of bbport
 
 Private fork of <https://github.com/deadinside28/bloodborne_pc> (GPL-2.0-or-later), used as the
-runtime scaffold of bloodborne-port. Upstream is the `upstream` remote; this fork's `master` is
+runtime scaffold of Paleblood. Upstream is the `upstream` remote; this fork's `master` is
 upstream plus the changes below, rebased when upstream moves.
 
 ## Local changes
