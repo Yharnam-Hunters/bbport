@@ -1,13 +1,16 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: GPL-2.0-or-later
-# Maintainer-only: install the automatic backup hook (tools/hooks/post-commit-backup.sh).
+# Install the hooks: the pre-commit check for everyone (no game data, no images of the game:
+# tools/check_no_game_data.py), and with --maintainer the automatic backup hook
+# (tools/hooks/post-commit-backup.sh):
 #   BB_BACKUP_DIR=<dir outside every repository> [BB_ARCHIVE_URL=<archive repo>] \
 #   [BB_BACKUP_BRANCH=master] tools/install_hooks.sh --maintainer
-# Without --maintainer it does nothing: contributors need no hooks in this repository.
 set -euo pipefail
 root=$(git rev-parse --show-toplevel)
+chmod +x "$root/tools/hooks/pre-commit"
+ln -sf ../../tools/hooks/pre-commit "$root/.git/hooks/pre-commit"
+echo "pre-commit hook installed (tools/check_no_game_data.py)"
 if [ "${1:-}" != "--maintainer" ]; then
-    echo "nothing to install (the backup hook is maintainer-only: --maintainer)"
     exit 0
 fi
 [ -n "${BB_BACKUP_DIR:-}" ] && git -C "$root" config bb.backupDir "$BB_BACKUP_DIR"

@@ -1,0 +1,14 @@
+# No game data is ever available here. The check runs on the repository alone.
+name: checks
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  game-data:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Reject game data and images of the game
+        run: python3 tools/check_no_game_data.py --tracked

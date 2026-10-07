@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# SPDX-License-Identifier: GPL-2.0-or-later
+# bbport pre-commit: no game data and no images of the game (tools/check_no_game_data.py --staged).
+set -u
+root=$(git rev-parse --show-toplevel) || exit 1
+python3 "$root/tools/check_no_game_data.py" --staged --root "$root" || {
+    echo "pre-commit: refused (FORK.md, Rules)" >&2
+    exit 1
+}
