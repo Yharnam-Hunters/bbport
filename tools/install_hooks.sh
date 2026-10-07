@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: GPL-2.0-or-later
 # Install the hooks: the pre-commit check for everyone (no game data, no images of the game:
-# tools/check_no_game_data.py), and with --maintainer the automatic backup hook
+# tools/check_no_game_data.py), and with --maintainer the push gate (tools/hooks/pre-push ->
+# tools/pre_push.sh) and the automatic backup hook
 # (tools/hooks/post-commit-backup.sh):
 #   BB_BACKUP_DIR=<dir outside every repository> [BB_ARCHIVE_URL=<archive repo>] \
 #   [BB_BACKUP_BRANCH=master] tools/install_hooks.sh --maintainer
@@ -13,6 +14,10 @@ echo "pre-commit hook installed (tools/check_no_game_data.py)"
 if [ "${1:-}" != "--maintainer" ]; then
     exit 0
 fi
+# The push gate: git push runs tools/pre_push.sh and sends nothing when it fails.
+chmod +x "$root/tools/hooks/pre-push" "$root/tools/pre_push.sh"
+ln -sf ../../tools/hooks/pre-push "$root/.git/hooks/pre-push"
+echo "pre-push hook installed: git push runs tools/pre_push.sh"
 [ -n "${BB_BACKUP_DIR:-}" ] && git -C "$root" config bb.backupDir "$BB_BACKUP_DIR"
 [ -n "${BB_ARCHIVE_URL:-}" ] && git -C "$root" config bb.archiveRemote "$BB_ARCHIVE_URL"
 git -C "$root" config bb.backupBranch "${BB_BACKUP_BRANCH:-master}"
